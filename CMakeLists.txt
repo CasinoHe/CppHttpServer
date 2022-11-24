@@ -8,6 +8,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(SRC_ROOT_DIR ${CMAKE_SOURCE_DIR})
 set(SRC_FILES
 	${SRC_ROOT_DIR}/main.cpp
+	${SRC_ROOT_DIR}/http_server/async_http_server.cpp
 )
 
 find_package(Boost COMPONENTS system program_options REQUIRED)

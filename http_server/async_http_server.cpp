@@ -1,4 +1,5 @@
 #include "async_http_server.h"
+#include "async_connection.h"
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -66,7 +67,18 @@ namespace cpp_http_server
 
   void AsyncHttpServer::on_accept(boost::beast::error_code ec, boost::asio::ip::tcp::socket socket)
   {
-    std::cout << "handle accept" << std::endl;
+    if (ec)
+    {
+      std::cerr << "accept failed. Reason: " << ec.message() << std::endl;
+      return;
+    }
+    else
+    {
+      std::cout << "receive accept event" << std::endl;
+      std::make_shared<AsyncTcpConnection>(std::move(socket))->run();
+    }
+
+    do_accept();
   }
 
   bool AsyncHttpServer::start()

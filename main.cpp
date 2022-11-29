@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include <memory>
 
 int main(int argc, char **argv)
 {
@@ -49,8 +50,8 @@ int main(int argc, char **argv)
   }
 
   // start http server
-  cpp_http_server::AsyncHttpServer http_server(ip_address, port, threads);
-  bool result = http_server.start();
+  auto http_server = std::make_shared<cpp_http_server::AsyncHttpServer>(ip_address, port, threads);
+  bool result = http_server->start();
   if (result)
   {
     return EXIT_SUCCESS;

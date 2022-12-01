@@ -74,7 +74,6 @@ namespace cpp_http_server
     }
     else
     {
-      std::cout << "receive accept event" << std::endl;
       std::make_shared<AsyncTcpConnection>(std::move(socket))->run();
     }
 

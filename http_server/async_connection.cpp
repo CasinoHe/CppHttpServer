@@ -1,5 +1,6 @@
 #include "async_connection.h"
 #include <iostream>
+#include <filesystem>
 
 namespace cpp_http_server
 {
@@ -49,13 +50,70 @@ namespace cpp_http_server
     }
   }
 
-  boost::beast::http::response<boost::beast::http::string_body> AsyncTcpConnection::handle_bad_request(boost::beast::string_view why)
+  void AsyncTcpConnection::handle_bad_request(boost::beast::string_view why)
   {
+    boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::bad_request, m_request.version()};
+    res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(boost::beast::http::field::content_type, "text/html");
+    res.keep_alive(m_request.keep_alive());
+    res.body() = std::string(why);
+    res.prepare_payload();
 
+    return do_write(std::move(res));
   }
 
   void AsyncTcpConnection::handle_request()
   {
+    if (m_request.method() != boost::beast::http::verb::get &&
+        m_request.method() != boost::beast::http::verb::post &&
+        m_request.method() != boost::beast::http::verb::head)
+    {
+      return handle_bad_request("Unknown HTTP-method");
+    }
 
+    if (m_request.target().empty() ||
+        m_request.target()[0] != '/' ||
+        m_request.target().find("..") != boost::beast::string_view::npos)
+    {
+      return handle_bad_request("Illegal request-target");
+    }
+
+    // Respond to HEAD request
+    if(m_request.method() == boost::beast::http::verb::head)
+    {
+      boost::beast::http::response<boost::beast::http::empty_body> res{boost::beast::http::status::ok, m_request.version()};
+      res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+      res.set(boost::beast::http::field::content_type, "application/text");
+      res.content_length(0);
+      res.keep_alive(m_request.keep_alive());
+      return do_write(std::move(res));
+    }
+
+    std::filesystem::path url_path(m_request.target().to_string().substr(1));
+
+    // use the first directory name as the plugin key name
+    std::string plugin_name((*url_path.begin()).generic_string());
+    // find plugin from plugin manager
+
+    // push the request to the plugin, and get a response write back to client
+
+    return;
+  }
+
+  void AsyncTcpConnection::on_write(bool is_close, boost::beast::error_code ec, std::size_t bytes_transferred)
+  {
+    if (ec)
+    {
+      std::cerr << "read socket data error, Reason: " << ec.message() << std::endl;
+      return;
+    }
+
+    if (is_close)
+    {
+      return do_close();
+    }
+
+    m_response = nullptr;
+    do_read();
   }
 }

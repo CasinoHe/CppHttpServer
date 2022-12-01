@@ -1,4 +1,5 @@
 #include "http_server/async_http_server.h"
+#include "plugin_base/plugin_mgr.h"
 #include <boost/program_options.hpp>
 #include <iostream>
 #include <vector>
@@ -42,11 +43,26 @@ int main(int argc, char **argv)
     return EXIT_SUCCESS;
   }
 
-  std::vector<std::string> all_plugins;
   if (vm.count("with") <= 0)
   {
     std::cout << "CppHttpServer Starts with no plugins, finihed all tasks and exit normally." << std::endl;
     return EXIT_SUCCESS;
+  }
+
+  auto plugin_mgr = cpp_http_server::PluginManager::get_instance();
+  bool regist_succeed = true;
+  for (auto &item : with_plugis)
+  {
+    if (!plugin_mgr->regist_plugin(item))
+    {
+      std::cout << "regist plugin " << item << " failed." << std::endl;
+      regist_succeed = false;
+    }
+  }
+
+  if (!regist_succeed)
+  {
+    return EXIT_FAILURE;
   }
 
   // start http server

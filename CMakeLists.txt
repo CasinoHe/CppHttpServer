@@ -20,3 +20,9 @@ add_executable(${PROJECT_NAME} ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} Boost::system Boost::program_options Boost::filesystem)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD 23)
 set_target_properties(${PROJECT_NAME} PROPERTIES CXX_STANDARD_REQUIRED ON)
+
+option(BUILD_PLUGIN "build plugin example" OFF)
+
+if (BUILD_PLUGIN)
+	add_subdirectory(plugins)
+endif(BUILD_PLUGIN)

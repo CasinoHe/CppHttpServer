@@ -1,4 +1,6 @@
 #include "async_connection.h"
+#include "plugin_base/plugin_mgr.h"
+#include "plugins/plugin_base.h"
 #include <iostream>
 #include <filesystem>
 
@@ -93,11 +95,39 @@ namespace cpp_http_server
 
     // use the first directory name as the plugin key name
     std::string plugin_name((*url_path.begin()).generic_string());
+
     // find plugin from plugin manager
+    auto plugin = PluginManager::get_instance()->get_plugin(plugin_name);
+    if (!plugin)
+    {
+      return handle_bad_request("Illegal request-target");
+    }
 
     // push the request to the plugin, and get a response write back to client
+    std::string response;
+    try
+    {
+      response = plugin->http_request(url_path.generic_string());
+    }
+    catch (std::exception &e)
+    {
+      std::cerr << "execute plugin's http request failed." << std::endl;
+      return handle_bad_request("Internal Error.");
+    }
 
-    return;
+    if (response.empty())
+    {
+      return handle_bad_request("Internal Request handle failed");
+    }
+
+    boost::beast::http::response<boost::beast::http::string_body> res{boost::beast::http::status::ok, m_request.version()};
+    res.set(boost::beast::http::field::server, BOOST_BEAST_VERSION_STRING);
+    res.set(boost::beast::http::field::content_type, "text/html");
+    res.keep_alive(m_request.keep_alive());
+    res.body() = response;
+    res.prepare_payload();
+
+    return do_write(std::move(res));
   }
 
   void AsyncTcpConnection::on_write(bool is_close, boost::beast::error_code ec, std::size_t bytes_transferred)

@@ -1,6 +1,5 @@
 #include "plugin_mgr.h"
 #include "plugin_base.h"
-#include <boost/dll.hpp>
 #include <filesystem>
 #include <iostream>
 
@@ -23,25 +22,40 @@ namespace cpp_http_server
 
   }
 
+  boost::shared_ptr<PluginBase> PluginManager::get_plugin(const std::string &plugin_name)
+  {
+    auto item = m_plugins.find(plugin_name);
+    if (item != m_plugins.end())
+    {
+      return item->second;
+    }
+    else
+    {
+      return nullptr;
+    }
+  }
+
   bool PluginManager::regist_plugin(const std::string &plugin_path)
   {
-    if (!std::filesystem::exists(plugin_path))
-    {
-      std::cerr << "cannot find plugin: " << plugin_path << std::endl;
-      return false;
-    }
-
-    if (m_plguins.find(plugin_path) != m_plguins.end())
+    if (m_plugins.find(plugin_path) != m_plugins.end())
     {
       // TODO: uload plugin and register again
       return false;
     }
 
-    boost::dll::fs::path lib_path(plugin_path);
-    boost::shared_ptr<PluginBase> plugin_ptr;
-
-    plugin_ptr = boost::dll::import_symbol<PluginBase>(lib_path, plugin_path, boost::dll::load_mode::append_decorations);
-    m_plguins[plugin_path] = plugin_ptr;
+    boost::shared_ptr<PluginBase> plugin = nullptr;
+    try
+    {
+      plugin = boost::dll::import_alias<PluginBase>(plugin_path, plugin_path, boost::dll::load_mode::append_decorations);
+    }
+    catch(std::exception &e)
+    {
+      std::cout << "load shared library " << plugin_path << " failed. Reason: " << e.what() << std::endl;
+      return false;
+    }
+    
+    std::cout << "load shared library " << plugin_path << " succeed!" << std::endl;
+    m_plugins[plugin_path] = plugin;
 
     return true;
   }
